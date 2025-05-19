@@ -34,6 +34,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Define the case type
 type Case = {
@@ -55,6 +62,16 @@ export default function CasesPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [username, setUsername] = useState<string | null>(null);
   const [casesData, setCasesData] = useState<Case[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  
+  // Form state
+  const [newCase, setNewCase] = useState({
+    id: "",
+    title: "",
+    type: "",
+    court: "",
+    judge: ""
+  });
 
   // Load cases data from CSV
   useEffect(() => {
@@ -153,6 +170,71 @@ export default function CasesPage() {
     router.push(`/cases/${caseId}`);
   };
 
+  const handleCreateCase = async () => {
+    // Check if all fields are filled
+    if (!newCase.id || !newCase.title || !newCase.type || !newCase.court || !newCase.judge) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if ID already exists
+    if (casesData.some(caseItem => caseItem.id === newCase.id)) {
+      toast({
+        title: "Error",
+        description: "This case ID already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newCaseData = {
+      id: newCase.id,
+      title: newCase.title,
+      type: newCase.type,
+      status: "Active",
+      court: newCase.court,
+      judge: newCase.judge,
+      lastUpdated: new Date().toISOString().split('T')[0],
+      transcriptCount: 0,
+      description: ""
+    };
+
+    try {
+      // Add to CSV file
+      const response = await fetch('/api/cases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCaseData),
+      });
+
+      if (!response.ok) throw new Error('Failed to create case');
+
+      // Update local state
+      setCasesData([...casesData, newCaseData]);
+      
+      // Reset form and close dialog
+      setNewCase({ id: "", title: "", type: "", court: "", judge: "" });
+      setIsAddDialogOpen(false);
+
+      toast({
+        title: "Success",
+        description: "Case created successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create case",
+        variant: "destructive",
+      });
+    }
+  };
+
   // If not authenticated yet, don't render the content
   if (username === null) {
     return null;
@@ -189,9 +271,6 @@ export default function CasesPage() {
               <LogOut className="h-4 w-4 mr-1" />
               Logout
             </Button>
-            <Button variant="outline" size="sm">
-              New Case
-            </Button>
           </div>
         </div>
       </header>
@@ -200,20 +279,91 @@ export default function CasesPage() {
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Case Management</h1>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
-                  Sort
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Case Number (A-Z)</DropdownMenuItem>
-                <DropdownMenuItem>Case Number (Z-A)</DropdownMenuItem>
-                <DropdownMenuItem>Last Updated (Newest)</DropdownMenuItem>
-                <DropdownMenuItem>Last Updated (Oldest)</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" size="sm">
+                    Add
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Case</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Case ID</label>
+                      <Input 
+                        placeholder="Enter case ID" 
+                        value={newCase.id}
+                        onChange={(e) => setNewCase({...newCase, id: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Case Name</label>
+                      <Input 
+                        placeholder="Enter case name" 
+                        value={newCase.title}
+                        onChange={(e) => setNewCase({...newCase, title: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Case Type</label>
+                      <Select 
+                        value={newCase.type}
+                        onValueChange={(value) => setNewCase({...newCase, type: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select case type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="civil">Civil</SelectItem>
+                          <SelectItem value="criminal">Criminal</SelectItem>
+                          <SelectItem value="family">Family</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Court Name</label>
+                      <Input 
+                        placeholder="Enter court name" 
+                        value={newCase.court}
+                        onChange={(e) => setNewCase({...newCase, court: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Judge Name</label>
+                      <Input 
+                        placeholder="Enter judge name" 
+                        value={newCase.judge}
+                        onChange={(e) => setNewCase({...newCase, judge: e.target.value})}
+                      />
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={handleCreateCase}
+                      disabled={!newCase.id || !newCase.title || !newCase.type || !newCase.court || !newCase.judge}
+                    >
+                      Create
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <ArrowUpDown className="mr-2 h-4 w-4" />
+                    Sort
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Case Number (A-Z)</DropdownMenuItem>
+                  <DropdownMenuItem>Case Number (Z-A)</DropdownMenuItem>
+                  <DropdownMenuItem>Last Updated (Newest)</DropdownMenuItem>
+                  <DropdownMenuItem>Last Updated (Oldest)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
