@@ -51,7 +51,15 @@ def askQuestion(question_file_path: str, context_file_path: str) -> str:
         with open(context_file_path, 'r', encoding='utf-8') as file:
             context = file.read().strip()
         
-        prompt = f"# You are a helpful assistant. Use the provided context to answer the question and the context is the truth that you need to use to answer the question. \n\n Context: {context} \n\n Question: {question}"
+        prompt = f"""
+        # You are a legal assistant. Based on the content of the following documents, answer the user's question as accurately and precisely as possible.
+
+        ## Documents:
+        {context}
+
+        ## User question:
+        {question}
+        """
         completion = get_completion(prompt)
         return completion
     except FileNotFoundError as e:
