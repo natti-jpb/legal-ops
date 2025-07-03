@@ -56,61 +56,6 @@ const casesData = {
       },
     ],
   },
-  "CV-2023-12345": {
-    id: "CV-2023-12345",
-    title: "Smith v. Acme Corp",
-    type: "Civil",
-    status: "Active",
-    court: "District Court",
-    judge: "Hon. Robert Chen",
-    lastUpdated: "June 2, 2023",
-    transcriptCount: 5,
-    description: "Product liability claim for defective manufacturing equipment.",
-  },
-  "CR-2023-98765": {
-    id: "CR-2023-98765",
-    title: "State v. Williams",
-    type: "Criminal",
-    status: "Active",
-    court: "Superior Court",
-    judge: "Hon. James Wilson",
-    lastUpdated: "May 22, 2023",
-    transcriptCount: 2,
-    description: "Fraud and embezzlement charges related to corporate accounting.",
-  },
-  "CV-2023-56789": {
-    id: "CV-2023-56789",
-    title: "Thompson v. City of Springfield",
-    type: "Civil",
-    status: "Closed",
-    court: "Federal Court",
-    judge: "Hon. Sarah Johnson",
-    lastUpdated: "April 10, 2023",
-    transcriptCount: 7,
-    description: "Civil rights violation claim against local police department.",
-  },
-  "PR-2023-34567": {
-    id: "PR-2023-34567",
-    title: "Estate of Davis",
-    type: "Probate",
-    status: "Active",
-    court: "Probate Court",
-    judge: "Hon. Michael Brown",
-    lastUpdated: "June 8, 2023",
-    transcriptCount: 1,
-    description: "Contested will and estate distribution proceedings.",
-  },
-  "FA-2023-23456": {
-    id: "FA-2023-23456",
-    title: "Martinez v. Martinez",
-    type: "Family",
-    status: "Active",
-    court: "Family Court",
-    judge: "Hon. Elizabeth Taylor",
-    lastUpdated: "May 30, 2023",
-    transcriptCount: 2,
-    description: "Child custody and support modification hearing.",
-  },
 }
 
 export default function CaseDetailPage() {
@@ -120,35 +65,40 @@ export default function CaseDetailPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [viewMode, setViewMode] = useState<"info" | "transcript">("info")
   const [selectedTranscriptId, setSelectedTranscriptId] = useState<string | undefined>(undefined)
+  const [caseData, setCaseData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // Check authentication on component mount
   useEffect(() => {
-    // Check if user is logged in (either in localStorage or sessionStorage)
     const storedUser = localStorage.getItem("courtTranscriptUser") || sessionStorage.getItem("courtTranscriptUser")
-
     if (!storedUser) {
-      // Redirect to login if not logged in
       router.push("/login")
     } else {
       setIsAuthenticated(true)
     }
   }, [router])
 
-  // Default to a fallback case if the ID doesn't exist
-  const defaultCase = {
-    id: "CR-2023-45678",
-    title: "State v. Johnson",
-    type: "Criminal",
-    status: "Active",
-    court: "Superior Court",
-    judge: "Hon. Maria Garcia",
-    lastUpdated: "May 15, 2023",
-    transcriptCount: 3,
-    description: "Felony assault and battery charges. Defendant pleaded not guilty.",
-  }
-
-  const caseData =
-    caseId && casesData[caseId as keyof typeof casesData] ? casesData[caseId as keyof typeof casesData] : defaultCase
+  // Fetch case data from API
+  useEffect(() => {
+    if (!caseId) return
+    setLoading(true)
+    setError(null)
+    fetch(`/api/cases/${caseId}/context`)
+      .then(res => {
+        if (!res.ok) throw new Error('Case not found')
+        return res.json()
+      })
+      .then(data => {
+        setCaseData(data)
+        setLoading(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setCaseData(null)
+        setLoading(false)
+      })
+  }, [caseId])
 
   // Handle logout
   const handleLogout = () => {
@@ -179,6 +129,16 @@ export default function CaseDetailPage() {
   // If not authenticated yet, don't render the content
   if (!isAuthenticated) {
     return null
+  }
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
+  if (error) {
+    return <div>{error}</div>
+  }
+  if (!caseData) {
+    return <div>No case data found.</div>
   }
 
   return (

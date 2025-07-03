@@ -1,0 +1,11 @@
+{
+  "id": "test-id-waw",
+  "title": "test case",
+  "type": "civil",
+  "status": "Active",
+  "court": "test court name",
+  "judge": "test judge name",
+  "lastUpdated": "2025-07-03",
+  "transcriptCount": 0,
+  "description": ""
+}

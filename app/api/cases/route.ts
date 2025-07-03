@@ -31,6 +31,14 @@ export async function POST(request: Request) {
     if (!fs.existsSync(caseFolderPath)) {
       fs.mkdirSync(caseFolderPath, { recursive: true });
     }
+
+    // Write context.json file with all case information
+    const contextFilePath = path.join(caseFolderPath, 'context.json');
+    const contextData = {
+      ...newCase,
+      "filingDate": new Date().toISOString(),
+    };
+    fs.writeFileSync(contextFilePath, JSON.stringify(contextData, null, 2), 'utf-8');
     
     return NextResponse.json({ success: true });
   } catch (error) {
