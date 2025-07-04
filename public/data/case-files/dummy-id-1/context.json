@@ -1,0 +1,12 @@
+{
+  "id": "dummy-id-1",
+  "title": "test case 1",
+  "type": "family",
+  "status": "Active",
+  "court": "test court 1",
+  "judge": "test judge 1",
+  "lastUpdated": "2025-07-04",
+  "transcriptCount": 0,
+  "description": "",
+  "filingDate": "2025-07-04T16:53:39.662Z"
+}

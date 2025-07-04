@@ -7,6 +7,7 @@ import { CaseInformation } from "@/components/case-information"
 import { LogOut, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
+import Loading from "./loading"
 
 // Sample case data - in a real app, you would fetch this based on the caseId
 const casesData = {
@@ -132,7 +133,7 @@ export default function CaseDetailPage() {
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return <Loading />
   }
   if (error) {
     return <div>{error}</div>

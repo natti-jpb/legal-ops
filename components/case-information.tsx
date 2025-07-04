@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
+import { useRouter } from "next/navigation"
 
-import { Calendar, User, Gavel, FileText, MapPin, AlertCircle, Plus, Upload } from "lucide-react"
+import { Calendar, User, Gavel, FileText, MapPin, AlertCircle, Plus, Upload, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -69,6 +70,7 @@ interface CaseInformationProps {
 }
 
 export function CaseInformation({ caseData, onViewTranscript }: CaseInformationProps) {
+  const router = useRouter()
   const [addDateDialogOpen, setAddDateDialogOpen] = useState(false)
   const [addDocumentDialogOpen, setAddDocumentDialogOpen] = useState(false)
   const [newCourtDate, setNewCourtDate] = useState({
@@ -83,6 +85,13 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
     type: "Legal Document",
     date: "",
     pages: "",
+  })
+  const [updateCourtDialogOpen, setUpdateCourtDialogOpen] = useState(false)
+  const [updateForm, setUpdateForm] = useState({
+    title: caseData.title || "",
+    court: caseData.court || "",
+    judge: caseData.judge || "",
+    type: caseData.type ? caseData.type.toLowerCase() : "",
   })
   // Provide default values for optional fields
   const participants = caseData.participants || [
@@ -214,6 +223,35 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
     })
   }
 
+  async function handleUpdateCourtInfo() {
+    try {
+      const res = await fetch(`/api/cases/${caseData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateForm),
+      })
+      if (!res.ok) throw new Error("Failed to update case")
+      toast({ title: "Success", description: "Case updated successfully" })
+      setUpdateCourtDialogOpen(false)
+      // Fetch latest info from API and update UI
+      const infoRes = await fetch(`/api/cases/${caseData.id}/context`)
+      if (infoRes.ok) {
+        const newData = await infoRes.json()
+        // Update the parent page's state if possible, otherwise reload
+        if (typeof window !== 'undefined' && window.location) {
+          window.location.reload()
+        }
+      } else {
+        // fallback: reload page
+        if (typeof window !== 'undefined' && window.location) {
+          window.location.reload()
+        }
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update case", variant: "destructive" })
+    }
+  }
+
   return (
     <div className="container mx-auto py-6 px-4 max-w-6xl">
       <div className="flex flex-col gap-6">
@@ -244,7 +282,7 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
                 Court Information
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative pb-16">
               <dl className="space-y-2">
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">Court</dt>
@@ -267,6 +305,9 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
                   <dd>{caseData.lastUpdated}</dd>
                 </div>
               </dl>
+              <div className="absolute bottom-4 right-4">
+                <Button variant="secondary" size="sm" onClick={() => setUpdateCourtDialogOpen(true)}><Pencil className="h-4 w-4" /></Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -600,6 +641,65 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
                 <Button type="submit">Add Document</Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Court Information Dialog */}
+        <Dialog open={updateCourtDialogOpen} onOpenChange={setUpdateCourtDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Court Information</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Case Name</label>
+                <Input
+                  placeholder="Enter case name"
+                  value={updateForm.title}
+                  onChange={e => setUpdateForm(f => ({ ...f, title: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Court</label>
+                <Input
+                  placeholder="Enter court name"
+                  value={updateForm.court}
+                  onChange={e => setUpdateForm(f => ({ ...f, court: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Judge</label>
+                <Input
+                  placeholder="Enter judge name"
+                  value={updateForm.judge}
+                  onChange={e => setUpdateForm(f => ({ ...f, judge: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Case Type</label>
+                <Select
+                  value={updateForm.type}
+                  onValueChange={value => setUpdateForm(f => ({ ...f, type: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select case type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="civil">Civil</SelectItem>
+                    <SelectItem value="criminal">Criminal</SelectItem>
+                    <SelectItem value="family">Family</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="secondary" onClick={() => setUpdateCourtDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button className="bg-black text-white hover:bg-zinc-900" onClick={handleUpdateCourtInfo}>
+                Save
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
