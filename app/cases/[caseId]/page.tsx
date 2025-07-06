@@ -67,8 +67,22 @@ export default function CaseDetailPage() {
   const [viewMode, setViewMode] = useState<"info" | "transcript">("info")
   const [selectedTranscriptId, setSelectedTranscriptId] = useState<string | undefined>(undefined)
   const [caseData, setCaseData] = useState(null)
+  const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Fetch documents.json for the case
+  const fetchDocuments = async () => {
+    if (!caseId) return
+    try {
+      const res = await fetch(`/data/case-files/${caseId}/documents/documents.json?_=${Date.now()}`)
+      if (!res.ok) throw new Error('Could not fetch documents')
+      const docs = await res.json()
+      setDocuments(docs)
+    } catch (err) {
+      setDocuments([])
+    }
+  }
 
   // Check authentication on component mount
   useEffect(() => {
@@ -99,6 +113,11 @@ export default function CaseDetailPage() {
         setCaseData(null)
         setLoading(false)
       })
+  }, [caseId])
+
+  // Fetch documents when caseId changes
+  useEffect(() => {
+    fetchDocuments()
   }, [caseId])
 
   // Handle logout
@@ -184,7 +203,12 @@ export default function CaseDetailPage() {
       </header>
 
       {viewMode === "info" ? (
-        <CaseInformation caseData={caseData} onViewTranscript={handleViewTranscript} />
+        <CaseInformation
+          caseData={caseData}
+          documents={documents}
+          refreshDocuments={fetchDocuments}
+          onViewTranscript={handleViewTranscript}
+        />
       ) : (
         <TranscriptViewer
           caseData={caseData}

@@ -1,9 +1,9 @@
 "use client"
 
-import type React from "react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
-import { Calendar, User, Gavel, FileText, MapPin, AlertCircle, Plus, Upload, Pencil } from "lucide-react"
+import { Calendar, User, Gavel, FileText, MapPin, AlertCircle, Plus, Upload, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -22,7 +22,6 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
-import { useState } from "react"
 
 interface CaseParticipant {
   name: string
@@ -66,10 +65,12 @@ interface CaseData {
 
 interface CaseInformationProps {
   caseData: CaseData
+  documents: Array<{ id: string; name: string; type: string; date: string }>
+  refreshDocuments: () => Promise<void>
   onViewTranscript: (transcriptId?: string) => void
 }
 
-export function CaseInformation({ caseData, onViewTranscript }: CaseInformationProps) {
+export function CaseInformation({ caseData, documents, refreshDocuments, onViewTranscript }: CaseInformationProps) {
   const router = useRouter()
   const [addDateDialogOpen, setAddDateDialogOpen] = useState(false)
   const [addDocumentDialogOpen, setAddDocumentDialogOpen] = useState(false)
@@ -93,6 +94,9 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
     judge: caseData.judge || "",
     type: caseData.type ? caseData.type.toLowerCase() : "",
   })
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null)
   // Provide default values for optional fields
   const participants = caseData.participants || [
     { name: "Maria Rodriguez", role: "Prosecutor", firm: "District Attorney's Office" },
@@ -130,51 +134,6 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
     },
   ]
 
-  const documents = caseData.documents || [
-    {
-      id: "doc-1",
-      name: "Indictment",
-      type: "Legal Document",
-      date: "April 30, 2023",
-      pages: 5,
-    },
-    {
-      id: "transcript-1",
-      name: "Day 1 - May 14, 2023",
-      type: "Transcript",
-      date: "May 14, 2023",
-      pages: 42,
-    },
-    {
-      id: "transcript-2",
-      name: "Day 2 - May 15, 2023",
-      type: "Transcript",
-      date: "May 15, 2023",
-      pages: 68,
-    },
-    {
-      id: "transcript-3",
-      name: "Day 3 - May 16, 2023",
-      type: "Transcript",
-      date: "May 16, 2023",
-      pages: 53,
-    },
-    {
-      id: "doc-2",
-      name: "Motion to Suppress",
-      type: "Legal Document",
-      date: "May 10, 2023",
-      pages: 12,
-    },
-    {
-      id: "doc-3",
-      name: "Evidence List",
-      type: "Legal Document",
-      date: "May 12, 2023",
-      pages: 8,
-    },
-  ]
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "active":
@@ -206,22 +165,36 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
     })
   }
 
-  const handleAddDocument = (e: React.FormEvent) => {
-    e.preventDefault()
-    // In a real app, you would save this to your database
-    toast({
-      title: "Document added",
-      description: `Added ${newDocument.name}`,
-    })
-    setAddDocumentDialogOpen(false)
-    // Reset form
-    setNewDocument({
-      name: "",
-      type: "Legal Document",
-      date: "",
-      pages: "",
-    })
-  }
+  const handleAddDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile || !newDocument.name) {
+      toast({ title: "Error", description: "Please select a file and enter a title.", variant: "destructive" });
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    formData.append("title", newDocument.name);
+    formData.append("type", newDocument.type);
+
+    // Get caseId from caseData
+    const caseId = caseData.id;
+    const res = await fetch(`/api/cases/${caseId}/documents/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      toast({ title: "Success", description: "Document uploaded successfully." });
+      setAddDocumentDialogOpen(false);
+      setSelectedFile(null);
+      setNewDocument({ name: "", type: "Legal Document", date: "", pages: "" });
+      if (typeof refreshDocuments === 'function') {
+        await refreshDocuments();
+      }
+    } else {
+      toast({ title: "Error", description: "Failed to upload document.", variant: "destructive" });
+    }
+  };
 
   async function handleUpdateCourtInfo() {
     try {
@@ -251,6 +224,30 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
       toast({ title: "Error", description: "Failed to update case", variant: "destructive" })
     }
   }
+
+  const handleDeleteDocument = async () => {
+    if (!docToDelete) return;
+    try {
+      const res = await fetch(`/api/cases/${caseData.id}/documents/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: docToDelete.id }),
+      });
+      if (res.ok) {
+        toast({ title: "Document deleted", description: `${docToDelete.name} was deleted.`, variant: "destructive" });
+        setDeleteDialogOpen(false);
+        setDocToDelete(null);
+        if (typeof refreshDocuments === 'function') {
+          await refreshDocuments();
+        }
+      } else {
+        const data = await res.json();
+        toast({ title: "Error", description: data.error || "Failed to delete document.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete document.", variant: "destructive" });
+    }
+  };
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-6xl">
@@ -398,7 +395,11 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
                   </CardTitle>
                   <CardDescription>Case documents and hearing transcripts ({documents.length} total)</CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setAddDocumentDialogOpen(true)}>
+                <Button size="sm" onClick={() => {
+                  setAddDocumentDialogOpen(true);
+                  setNewDocument({ name: "", type: "Legal Document", date: "", pages: "" });
+                  setSelectedFile(null);
+                }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Document
                 </Button>
@@ -411,32 +412,56 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
                         <th className="text-left py-3 px-4 font-medium">Document</th>
                         <th className="text-left py-3 px-4 font-medium">Type</th>
                         <th className="text-left py-3 px-4 font-medium">Date</th>
-                        <th className="text-left py-3 px-4 font-medium">Pages</th>
                         <th className="text-right py-3 px-4 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {documents.map((doc) => (
-                        <tr key={doc.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4">{doc.name}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant={doc.type === "Transcript" ? "default" : "outline"}>{doc.type}</Badge>
-                          </td>
-                          <td className="py-3 px-4">{doc.date}</td>
-                          <td className="py-3 px-4">{doc.pages} pages</td>
-                          <td className="py-3 px-4 text-right">
-                            {doc.type === "Transcript" ? (
-                              <Button variant="outline" size="sm" onClick={() => onViewTranscript(doc.id)}>
-                                View Transcript
-                              </Button>
-                            ) : (
-                              <Button variant="outline" size="sm">
-                                View Document
-                              </Button>
-                            )}
-                          </td>
+                      {documents.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-3 px-4 text-center text-muted-foreground">No files yet</td>
                         </tr>
-                      ))}
+                      ) : (
+                        documents.map((doc) => (
+                          <tr key={doc.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-4">{doc.name}</td>
+                            <td className="py-3 px-4">
+                              <Badge variant={doc.type === "Transcript" ? "default" : "outline"}>{doc.type}</Badge>
+                            </td>
+                            <td className="py-3 px-4">{doc.date}</td>
+                            <td className="py-3 px-4 text-right">
+                              {doc.type === "Transcript" ? (
+                                <Button variant="outline" size="sm" onClick={() => onViewTranscript(doc.id)}>
+                                  View Transcript
+                                </Button>
+                              ) : (
+                                <>
+                                  <a
+                                    href={`/data/case-files/${caseData.id}/documents/${doc.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Button variant="outline" size="sm">
+                                      View Document
+                                    </Button>
+                                  </a>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="ml-2 text-red-500 hover:text-red-700"
+                                    onClick={() => {
+                                      setDocToDelete({ id: doc.id, name: doc.name });
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    aria-label="Delete document"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -598,40 +623,50 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="doc-date">Date</Label>
-                    <Input
-                      id="doc-date"
-                      type="date"
-                      value={newDocument.date}
-                      onChange={(e) => setNewDocument({ ...newDocument, date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="doc-pages">Pages</Label>
-                    <Input
-                      id="doc-pages"
-                      type="number"
-                      placeholder="Number of pages"
-                      value={newDocument.pages}
-                      onChange={(e) => setNewDocument({ ...newDocument, pages: e.target.value })}
-                    />
-                  </div>
-                </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="doc-file">Upload File</Label>
-                  <div className="border-2 border-dashed rounded-md p-6 text-center">
-                    <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Drag and drop your file here, or click to browse</p>
-                    <Input id="doc-file" type="file" className="hidden" />
-                    <Label htmlFor="doc-file" className="mt-2 inline-block">
-                      <Button type="button" variant="outline" size="sm">
-                        Browse Files
-                      </Button>
-                    </Label>
-                  </div>
+                  {selectedFile ? (
+                    <div className="border rounded-md p-6 text-center flex flex-col items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium mb-0">{selectedFile.name}</p>
+                        <button
+                          type="button"
+                          className="ml-2 text-red-500 hover:text-red-700"
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setNewDocument({ name: "", type: "Legal Document", date: "", pages: "" });
+                          }}
+                          aria-label="Remove file"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed rounded-md p-6 text-center">
+                      <input
+                        id="doc-file"
+                        type="file"
+                        className="hidden"
+                        onChange={e => {
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            setSelectedFile(file);
+                            setNewDocument(prev => ({
+                              ...prev,
+                              name: prev.name ? prev.name : file.name
+                            }));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="doc-file" className="mt-2 inline-block">
+                        <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('doc-file')?.click()}>
+                          Browse Files
+                        </Button>
+                      </Label>
+                    </div>
+                  )}
                 </div>
               </div>
               <DialogFooter>
@@ -698,6 +733,26 @@ export function CaseInformation({ caseData, onViewTranscript }: CaseInformationP
               </Button>
               <Button className="bg-black text-white hover:bg-zinc-900" onClick={handleUpdateCourtInfo}>
                 Save
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Document</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete <span className="font-semibold">{docToDelete?.name}</span>?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteDocument}>
+                Delete
               </Button>
             </div>
           </DialogContent>

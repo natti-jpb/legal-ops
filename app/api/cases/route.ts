@@ -32,6 +32,17 @@ export async function POST(request: Request) {
       fs.mkdirSync(caseFolderPath, { recursive: true });
     }
 
+    // Create documents folder
+    const documentsFolderPath = path.join(caseFolderPath, 'documents');
+    if (!fs.existsSync(documentsFolderPath)) {
+      fs.mkdirSync(documentsFolderPath, { recursive: true });
+    }
+
+    // Write empty documents.json file with required fields structure
+    const documentsJsonPath = path.join(documentsFolderPath, 'documents.json');
+    // Array of document objects, each with id, name, type, date (easy to add more fields later)
+    fs.writeFileSync(documentsJsonPath, JSON.stringify([], null, 2), 'utf-8');
+
     // Write context.json file with all case information
     const contextFilePath = path.join(caseFolderPath, 'context.json');
     const contextData = {
