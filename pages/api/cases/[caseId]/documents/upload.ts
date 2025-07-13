@@ -43,12 +43,25 @@ export default async function handler(
     const type = fields.type || "Document";
     const date = new Date().toISOString().split("T")[0];
 
-    const finalFileName = originalName || fileName;
-    const finalPath = path.join(uploadDir, finalFileName);
-    if (finalFileName !== fileName) {
-      fs.renameSync(path.join(uploadDir, fileName), finalPath);
+    // Get the extension from the original file
+    const ext = path.extname(originalName || fileName) || '';
+    // Use the exact user input for the filename (case sensitive, with spaces/special chars), plus extension
+    let baseName = String(name);
+    let userFileName = baseName + ext;
+    let userFilePath = path.join(uploadDir, userFileName);
+    let counter = 1;
+    while (fs.existsSync(userFilePath)) {
+      userFileName = `${baseName} (${counter})${ext}`;
+      userFilePath = path.join(uploadDir, userFileName);
+      counter++;
     }
 
+    // Rename the uploaded file to the exact user-provided name (or unique name)
+    if (userFileName !== fileName) {
+      fs.renameSync(path.join(uploadDir, fileName), userFilePath);
+    }
+
+    // Update documents.json
     const documentsJsonPath = path.join(uploadDir, "documents.json");
     let documents = [];
     if (fs.existsSync(documentsJsonPath)) {
@@ -65,17 +78,17 @@ export default async function handler(
           ) + 1
         : 1;
 
-    documents.push({ id: nextId, name, type, date });
+    documents.push({ id: nextId, name: userFileName, type, date });
 
     if (fileObj.mimetype?.startsWith("audio/")) {
       try {
         const transcript = await transcribeAudio(
-          finalPath,
+          userFilePath,
           fileObj.mimetype || "audio/mpeg",
-          originalName || fileName
+          userFileName
         );
 
-        const baseName = path.parse(finalFileName).name;
+        const baseName = path.parse(userFileName).name;
         const transcriptFilename = `${baseName} Transcript.txt`;
         const transcriptPath = path.join(uploadDir, transcriptFilename);
         fs.writeFileSync(transcriptPath, transcript, "utf-8");
@@ -135,6 +148,6 @@ async function transcribeAudio(
     throw new Error(`Transcription failed: ${response.status}`);
   }
 
-  const result = await response.json();
+  const result = await response.json() as { transcript: string };
   return result.transcript;
 }

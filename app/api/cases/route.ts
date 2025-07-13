@@ -51,6 +51,10 @@ export async function POST(request: Request) {
     };
     fs.writeFileSync(contextFilePath, JSON.stringify(contextData, null, 2), 'utf-8');
     
+    // Write empty participants.json file
+    const participantsJsonPath = path.join(caseFolderPath, 'participants.json');
+    fs.writeFileSync(participantsJsonPath, JSON.stringify([], null, 2), 'utf-8');
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error adding case:', error);

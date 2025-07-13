@@ -22,6 +22,6 @@ async def transcribe(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-      # python -m venv venv
+      #python -m venv venv
       #source venv/bin/activate
       #python -m uvicorn whisper_api:app --host 0.0.0.0 --port 8000

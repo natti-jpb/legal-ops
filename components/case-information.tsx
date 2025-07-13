@@ -15,6 +15,7 @@ import {
   Pencil,
   Trash2,
   Loader2,
+  Copy as CopyIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,6 +93,8 @@ interface CaseInformationProps {
   documents: Array<{ id: string; name: string; type: string; date: string }>;
   refreshDocuments: () => Promise<void>;
   onViewTranscript: (transcriptId?: string) => void;
+  participants: Array<any>;
+  setParticipants: (participants: any[]) => void;
 }
 
 export function CaseInformation({
@@ -99,6 +102,8 @@ export function CaseInformation({
   documents,
   refreshDocuments,
   onViewTranscript,
+  participants,
+  setParticipants,
 }: CaseInformationProps) {
   const router = useRouter();
   const [addDateDialogOpen, setAddDateDialogOpen] = useState(false);
@@ -131,17 +136,13 @@ export function CaseInformation({
   } | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  // Provide default values for optional fields
-  const participants = caseData.participants || [
-    {
-      name: "Maria Rodriguez",
-      role: "Prosecutor",
-      firm: "District Attorney's Office",
-    },
-    { name: "Raj Patel", role: "Defense Attorney", firm: "Patel & Associates" },
-    { name: "Michael Johnson", role: "Defendant" },
-    { name: "Hon. Maria Garcia", role: "Judge", firm: "Superior Court" },
-  ];
+  const [selectedParticipant, setSelectedParticipant] = useState<null | any>(null);
+  const [participantDialogOpen, setParticipantDialogOpen] = useState(false);
+  const [showRemoveParticipantDialog, setShowRemoveParticipantDialog] = useState(false);
+  const [removingParticipant, setRemovingParticipant] = useState(false);
+  const [addParticipantDialogOpen, setAddParticipantDialogOpen] = useState(false);
+  const [newParticipant, setNewParticipant] = useState({ name: '', role: '', firm: '', contact: '' });
+  const [addingParticipant, setAddingParticipant] = useState(false);
 
   const courtDates = caseData.courtDates || [
     {
@@ -352,13 +353,16 @@ export function CaseInformation({
         {/* Case details */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Gavel className="h-5 w-5 mr-2" />
-                Court Information
-              </CardTitle>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <div className="flex items-center">
+                <CardTitle className="text-lg flex items-center">
+                  <Gavel className="h-5 w-5 mr-2" />
+                  Court Information
+                </CardTitle>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => setUpdateCourtDialogOpen(true)}><Pencil className="h-4 w-4" /></Button>
             </CardHeader>
-            <CardContent className="relative pb-16">
+            <CardContent className="pb-16">
               <dl className="space-y-2">
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">
@@ -391,48 +395,61 @@ export function CaseInformation({
                   <dd>{caseData.lastUpdated}</dd>
                 </div>
               </dl>
-              <div className="absolute bottom-4 right-4">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setUpdateCourtDialogOpen(true)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
             </CardContent>
           </Card>
 
           <Card className="md:col-span-2">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-lg flex items-center">
                 <User className="h-5 w-5 mr-2" />
                 Case Participants
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {participants.map((participant, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="bg-primary/10 rounded-full p-2">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-medium">{participant.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {participant.role}
+              <div className="max-h-72 overflow-y-auto pr-2 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {participants.map((participant, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className="flex items-start space-x-3 mb-2 w-full bg-transparent hover:bg-muted/50 focus:bg-muted/70 rounded-md transition-colors p-2 text-left"
+                      tabIndex={0}
+                      onClick={() => {
+                        setSelectedParticipant(participant);
+                        setParticipantDialogOpen(true);
+                      }}
+                    >
+                      <div className="bg-primary/10 rounded-full p-2 flex-shrink-0">
+                        <User className="h-5 w-5 text-primary" />
                       </div>
-                      {participant.firm && (
-                        <div className="text-sm">{participant.firm}</div>
-                      )}
+                      <div className="min-w-0">
+                        <div className="font-medium truncate" title={participant.name}>{participant.name}</div>
+                        <div className="text-sm text-muted-foreground truncate" title={participant.role + (participant.firm ? `, ${participant.firm}` : "")}>{participant.role}{participant.firm ? `, ${participant.firm}` : ""}</div>
+                        {participant.contact && (
+                          <div className="text-xs text-muted-foreground truncate" title={participant.contact}>{participant.contact}</div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                  {/* Add participant button as a grid item styled like a participant entry, but without a border */}
+                  <button
+                    type="button"
+                    className="flex items-start space-x-3 mb-2 w-full bg-transparent hover:bg-muted/50 focus:bg-muted/70 rounded-md transition-colors p-2 text-left"
+                    aria-label="Add participant"
+                    onClick={() => setAddParticipantDialogOpen(true)}
+                  >
+                    <div className="bg-primary/10 rounded-full p-2 flex-shrink-0">
+                      <Plus className="h-5 w-5 text-primary" />
                     </div>
-                  </div>
-                ))}
+                    <div className="min-w-0">
+                      <div className="font-medium truncate text-primary">Add participant</div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
-
         {/* Tabs for different sections */}
         <Tabs defaultValue="schedule" className="w-full">
           <TabsList className="mb-4">
@@ -883,7 +900,14 @@ export function CaseInformation({
                       onDrop={(e) => {
                         e.preventDefault();
                         setIsDragActive(false);
-                        // Do not handle file selection yet, just visual feedback for now
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          const file = e.dataTransfer.files[0];
+                          setSelectedFile(file);
+                          setNewDocument(prev => ({
+                            ...prev,
+                            name: prev.name ? prev.name : file.name
+                          }));
+                        }
                       }}
                     >
                       <input
@@ -1033,6 +1057,256 @@ export function CaseInformation({
                 Delete
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Participant Detail Dialog */}
+        <Dialog open={participantDialogOpen} onOpenChange={setParticipantDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Participant Details</DialogTitle>
+            </DialogHeader>
+            {selectedParticipant && (
+              <div className="space-y-4 py-2">
+                <div>
+                  <span className="font-semibold">Name: </span>
+                  <span>{selectedParticipant.name}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Role: </span>
+                  <span>{selectedParticipant.role}</span>
+                </div>
+                {selectedParticipant.firm && (
+                  <div>
+                    <span className="font-semibold">Firm: </span>
+                    <span>{selectedParticipant.firm}</span>
+                  </div>
+                )}
+                {selectedParticipant.contact && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Contact: </span>
+                    <span className="flex-grow break-all">{selectedParticipant.contact}</span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="ml-1 flex-shrink-0"
+                      aria-label="Copy contact"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(selectedParticipant.contact);
+                          toast({
+                            title: 'Copied',
+                            description: 'Contact copied to clipboard.',
+                            variant: 'default',
+                          });
+                        } catch {
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to copy contact.',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    >
+                      <CopyIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setParticipantDialogOpen(false)}>
+                Close
+              </Button>
+              <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" aria-label="Delete participant" onClick={() => setShowRemoveParticipantDialog(true)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Remove Participant Confirmation Dialog */}
+        <Dialog open={showRemoveParticipantDialog} onOpenChange={(open) => {
+          setShowRemoveParticipantDialog(open);
+          if (!open) setRemovingParticipant(false);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove participant</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove <span className="font-semibold">{selectedParticipant?.name}</span> from this case?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowRemoveParticipantDialog(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={async () => {
+                if (!selectedParticipant) return;
+                setRemovingParticipant(true);
+                try {
+                  const res = await fetch(`/api/cases/${caseData.id}/participants`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: selectedParticipant.name }),
+                  });
+                  if (res.ok) {
+                    setParticipants(participants.filter((p) => p.name !== selectedParticipant.name));
+                    setShowRemoveParticipantDialog(false);
+                    setParticipantDialogOpen(false);
+                    setRemovingParticipant(false);
+                    toast({
+                      title: 'Success',
+                      description: 'Participant removed successfully.',
+                      variant: 'default',
+                    });
+                  } else {
+                    setRemovingParticipant(false);
+                    const data = await res.json();
+                    toast({
+                      title: 'Error',
+                      description: data.error || 'Failed to remove participant.',
+                      variant: 'destructive',
+                    });
+                  }
+                } catch (e) {
+                  setRemovingParticipant(false);
+                  toast({
+                    title: 'Error',
+                    description: 'Failed to remove participant.',
+                    variant: 'destructive',
+                  });
+                }
+              }} disabled={removingParticipant}>
+                Remove participant
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Participant Dialog */}
+        <Dialog open={addParticipantDialogOpen} onOpenChange={setAddParticipantDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Participant</DialogTitle>
+              <p className="text-sm text-muted-foreground mb-2">Fields with a <span className="text-red-500">*</span> are mandatory.</p>
+            </DialogHeader>
+            <form>
+              <div className="grid gap-4 py-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="participant-name">Name<span className="text-red-500">*</span></Label>
+                  <Input
+                    id="participant-name"
+                    placeholder="Full name"
+                    value={newParticipant.name}
+                    onChange={e => setNewParticipant({ ...newParticipant, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="participant-role">Role<span className="text-red-500">*</span></Label>
+                  <Input
+                    id="participant-role"
+                    placeholder="Role"
+                    value={newParticipant.role}
+                    onChange={e => setNewParticipant({ ...newParticipant, role: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="participant-firm">Firm</Label>
+                  <Input
+                    id="participant-firm"
+                    placeholder="Firm name"
+                    value={newParticipant.firm}
+                    onChange={e => setNewParticipant({ ...newParticipant, firm: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="participant-contact">Contact</Label>
+                  <Input
+                    id="participant-contact"
+                    placeholder="example@email.com"
+                    value={newParticipant.contact}
+                    onChange={e => setNewParticipant({ ...newParticipant, contact: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddParticipantDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-black text-white hover:bg-zinc-900"
+                  disabled={addingParticipant}
+                  onClick={async () => {
+                    if (addingParticipant) return;
+                    // Validate required fields
+                    if (!newParticipant.name.trim() || !newParticipant.role.trim()) {
+                      toast({
+                        title: 'Error',
+                        description: 'Please fill in all mandatory fields.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+                    setAddingParticipant(true);
+                    try {
+                      const res = await fetch(`/api/cases/${caseData.id}/participants`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          name: newParticipant.name.trim(),
+                          role: newParticipant.role.trim(),
+                          firm: newParticipant.firm.trim(),
+                          contact: newParticipant.contact.trim(),
+                        }),
+                      });
+                      if (res.ok) {
+                        setParticipants([
+                          ...participants,
+                          {
+                            name: newParticipant.name.trim(),
+                            role: newParticipant.role.trim(),
+                            firm: newParticipant.firm.trim(),
+                            contact: newParticipant.contact.trim(),
+                          },
+                        ]);
+                        setAddParticipantDialogOpen(false);
+                        setNewParticipant({ name: '', role: '', firm: '', contact: '' });
+                        toast({
+                          title: 'Success',
+                          description: 'Participant added successfully.',
+                          variant: 'default',
+                        });
+                      } else {
+                        const data = await res.json();
+                        toast({
+                          title: 'Error',
+                          description: data.error || 'Failed to add participant.',
+                          variant: 'destructive',
+                        });
+                      }
+                    } catch (e) {
+                      toast({
+                        title: 'Error',
+                        description: 'Failed to add participant.',
+                        variant: 'destructive',
+                      });
+                    }
+                    setAddingParticipant(false);
+                  }}
+                >
+                  Add participant
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

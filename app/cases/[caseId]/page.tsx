@@ -59,6 +59,13 @@ const casesData = {
   },
 }
 
+interface Participant {
+  name: string; // unique
+  role: string;
+  firm?: string;
+  contact?: string;
+}
+
 export default function CaseDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -70,6 +77,7 @@ export default function CaseDetailPage() {
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [participants, setParticipants] = useState<Participant[]>([]);
 
   // Fetch documents.json for the case
   const fetchDocuments = async () => {
@@ -99,18 +107,26 @@ export default function CaseDetailPage() {
     if (!caseId) return
     setLoading(true)
     setError(null)
-    fetch(`/api/cases/${caseId}/context`)
-      .then(res => {
+    // Fetch context.json and participants via API route in parallel
+    Promise.all([
+      fetch(`/api/cases/${caseId}/context`).then(res => {
         if (!res.ok) throw new Error('Case not found')
         return res.json()
+      }),
+      fetch(`/api/cases/${caseId}/participants`).then(res => {
+        if (!res.ok) throw new Error('Participants not found')
+        return res.json()
       })
-      .then(data => {
+    ])
+      .then(([data, participantsData]) => {
         setCaseData(data)
+        setParticipants(Array.isArray(participantsData) ? participantsData : [])
         setLoading(false)
       })
       .catch(err => {
         setError(err.message)
         setCaseData(null)
+        setParticipants([])
         setLoading(false)
       })
   }, [caseId])
@@ -208,6 +224,8 @@ export default function CaseDetailPage() {
           documents={documents}
           refreshDocuments={fetchDocuments}
           onViewTranscript={handleViewTranscript}
+          participants={participants}
+          setParticipants={setParticipants}
         />
       ) : (
         <TranscriptViewer

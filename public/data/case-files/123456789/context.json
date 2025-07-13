@@ -1,0 +1,12 @@
+{
+  "id": "123456789",
+  "title": "test",
+  "type": "civil",
+  "status": "Active",
+  "court": "TEST",
+  "judge": "TEST",
+  "lastUpdated": "2025-07-13",
+  "transcriptCount": 0,
+  "description": "",
+  "filingDate": "2025-07-13T15:39:51.789Z"
+}
