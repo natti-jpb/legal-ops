@@ -50,8 +50,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (fs.existsSync(documentsJsonPath)) {
       documents = JSON.parse(fs.readFileSync(documentsJsonPath, "utf-8"));
     }
+    // Find the next integer id
+    let nextId = 1;
+    if (documents.length > 0) {
+      const maxId = Math.max(
+        0,
+        ...documents
+          .map((doc: any) => parseInt(doc.id, 10))
+          .filter((n: number) => !isNaN(n))
+      );
+      nextId = maxId + 1;
+    }
     documents.push({
-      id: finalFileName,
+      id: nextId,
       name,
       type,
       date,

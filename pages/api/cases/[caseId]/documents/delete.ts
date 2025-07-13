@@ -6,12 +6,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).end();
 
   const caseId = req.query.caseId as string;
-  const { id } = req.body;
-  if (!id) return res.status(400).json({ error: "Missing document id" });
+  const { id, name } = req.body;
+  if (!id || !name) return res.status(400).json({ error: "Missing document id or name" });
 
   const documentsDir = path.join(process.cwd(), "public/data/case-files", caseId, "documents");
   const documentsJsonPath = path.join(documentsDir, "documents.json");
-  const filePath = path.join(documentsDir, id);
+  const filePath = path.join(documentsDir, name);
 
   try {
     // Remove from documents.json

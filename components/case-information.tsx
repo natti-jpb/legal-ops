@@ -97,6 +97,7 @@ export function CaseInformation({ caseData, documents, refreshDocuments, onViewT
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [isDragActive, setIsDragActive] = useState(false);
   // Provide default values for optional fields
   const participants = caseData.participants || [
     { name: "Maria Rodriguez", role: "Prosecutor", firm: "District Attorney's Office" },
@@ -231,7 +232,7 @@ export function CaseInformation({ caseData, documents, refreshDocuments, onViewT
       const res = await fetch(`/api/cases/${caseData.id}/documents/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: docToDelete.id }),
+        body: JSON.stringify({ id: docToDelete.id, name: docToDelete.name }),
       });
       if (res.ok) {
         toast({ title: "Document deleted", description: `${docToDelete.name} was deleted.`, variant: "destructive" });
@@ -421,46 +422,50 @@ export function CaseInformation({ caseData, documents, refreshDocuments, onViewT
                           <td colSpan={4} className="py-3 px-4 text-center text-muted-foreground">No files yet</td>
                         </tr>
                       ) : (
-                        documents.map((doc) => (
-                          <tr key={doc.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4">{doc.name}</td>
-                            <td className="py-3 px-4">
-                              <Badge variant={doc.type === "Transcript" ? "default" : "outline"}>{doc.type}</Badge>
-                            </td>
-                            <td className="py-3 px-4">{doc.date}</td>
-                            <td className="py-3 px-4 text-right">
-                              {doc.type === "Transcript" ? (
-                                <Button variant="outline" size="sm" onClick={() => onViewTranscript(doc.id)}>
-                                  View Transcript
-                                </Button>
-                              ) : (
-                                <>
-                                  <a
-                                    href={`/data/case-files/${caseData.id}/documents/${doc.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <Button variant="outline" size="sm">
-                                      View Document
-                                    </Button>
-                                  </a>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="ml-2 text-red-500 hover:text-red-700"
-                                    onClick={() => {
-                                      setDocToDelete({ id: doc.id, name: doc.name });
-                                      setDeleteDialogOpen(true);
-                                    }}
-                                    aria-label="Delete document"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
+                        documents.map((doc) => {
+                          // Ensure doc.name is a string
+                          const fileName = Array.isArray(doc.name) ? doc.name[0] : doc.name;
+                          return (
+                            <tr key={doc.id} className="border-b hover:bg-muted/50">
+                              <td className="py-3 px-4">{fileName}</td>
+                              <td className="py-3 px-4">
+                                <Badge variant={doc.type === "Transcript" ? "default" : "outline"}>{doc.type}</Badge>
+                              </td>
+                              <td className="py-3 px-4">{doc.date}</td>
+                              <td className="py-3 px-4 text-right">
+                                {doc.type === "Transcript" ? (
+                                  <Button variant="outline" size="sm" onClick={() => onViewTranscript(doc.id)}>
+                                    View Transcript
                                   </Button>
-                                </>
-                              )}
-                            </td>
-                          </tr>
-                        ))
+                                ) : (
+                                  <>
+                                    <a
+                                      href={`/data/case-files/${caseData.id}/documents/${fileName}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <Button variant="outline" size="sm">
+                                        View Document
+                                      </Button>
+                                    </a>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="ml-2 text-red-500 hover:text-red-700"
+                                      onClick={() => {
+                                        setDocToDelete({ id: doc.id, name: fileName });
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      aria-label="Delete document"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -644,7 +649,22 @@ export function CaseInformation({ caseData, documents, refreshDocuments, onViewT
                       <p className="text-sm text-muted-foreground">{(selectedFile.size / 1024).toFixed(2)} KB</p>
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed rounded-md p-6 text-center">
+                    <div
+                      className={`border-2 border-dashed rounded-md p-6 text-center transition-colors duration-150 ${isDragActive ? "border-blue-500 bg-blue-50" : ""}`}
+                      onDragOver={e => {
+                        e.preventDefault();
+                        setIsDragActive(true);
+                      }}
+                      onDragLeave={e => {
+                        e.preventDefault();
+                        setIsDragActive(false);
+                      }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setIsDragActive(false);
+                        // Do not handle file selection yet, just visual feedback for now
+                      }}
+                    >
                       <input
                         id="doc-file"
                         type="file"
