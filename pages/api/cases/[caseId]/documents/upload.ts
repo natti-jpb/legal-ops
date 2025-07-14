@@ -39,8 +39,9 @@ export default async function handler(
 
     const fileName = fileObj.newFilename;
     const originalName = fileObj.originalFilename;
-    const name = fields.title || originalName || fileName;
-    const type = fields.type || "Document";
+    // Normalize fields.title and fields.type to strings
+    const name = Array.isArray(fields.title) ? fields.title[0] : fields.title || originalName || fileName;
+    const type = Array.isArray(fields.type) ? fields.type[0] : fields.type || "Document";
     const date = new Date().toISOString().split("T")[0];
 
     // Get the extension from the original file
@@ -95,9 +96,10 @@ export default async function handler(
 
         documents.push({
           id: nextId + 1,
-          name: [transcriptFilename],
-          type: ["Transcript"],
+          name: transcriptFilename,
+          type: "Transcript",
           date,
+          audioFile: nextId, // Link to the audio file's id
         });
       } catch (err) {
         console.error("Transcription failed:", err);

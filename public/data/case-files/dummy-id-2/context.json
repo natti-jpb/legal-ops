@@ -2,7 +2,7 @@
   "id": "dummy-id-2",
   "title": "case 2 !",
   "type": "civil",
-  "status": "Active",
+  "status": "pending",
   "court": "that's a cool court name",
   "judge": "that's a cool judge name",
   "lastUpdated": "2025-07-06",

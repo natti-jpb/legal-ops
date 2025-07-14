@@ -2,11 +2,11 @@
   "id": "test-case-for-participants",
   "title": "participants test",
   "type": "civil",
-  "status": "Active",
+  "status": "active",
   "court": "Dummy court",
   "judge": "Dummy Judge",
-  "lastUpdated": "2025-07-13",
-  "transcriptCount": 0,
-  "description": "",
+  "lastUpdated": "2025-07-14",
+  "transcriptCount": "0",
+  "description": "\r",
   "filingDate": "2025-07-13T15:25:49.081Z"
 }

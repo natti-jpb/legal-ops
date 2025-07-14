@@ -27,17 +27,19 @@ interface TranscriptViewerProps {
   caseData?: CaseData
   selectedTranscriptId?: string
   onBackToInfo?: () => void
+  audioUrl?: string
+  transcriptUrl?: string
 }
 
-export function TranscriptViewer({ caseData, selectedTranscriptId, onBackToInfo }: TranscriptViewerProps) {
+export function TranscriptViewer({ caseData, selectedTranscriptId, onBackToInfo, audioUrl, transcriptUrl }: TranscriptViewerProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [currentAudioTime, setCurrentAudioTime] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
 
-  // Sample audio URL - replace with your actual audio file
-  const audioUrl = "https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3"
+  // Use the provided audioUrl or fallback to the sample
+  const effectiveAudioUrl = audioUrl || "https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3";
 
   // Handle time updates from the audio player
   const handleTimeUpdate = (currentTime: number, duration: number) => {
@@ -87,54 +89,27 @@ export function TranscriptViewer({ caseData, selectedTranscriptId, onBackToInfo 
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="sm">
-            Export
-          </Button>
-          <Button size="sm">Annotate</Button>
         </div>
       </div>
-      <div className="flex flex-1 overflow-hidden">
-        <TranscriptSidebar />
-        <main className="flex-1 overflow-auto p-4">
-          <Tabs defaultValue="transcript" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="transcript">Transcript</TabsTrigger>
-              <TabsTrigger value="exhibits">Exhibits</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-            </TabsList>
-            <TabsContent value="transcript" className="mt-0">
-              <div className="rounded-lg border bg-card">
-                {/* Audio Player */}
-                <AudioPlayer
-                  audioUrl={audioUrl}
-                  onTimeUpdate={handleTimeUpdate}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                />
+      <main className="flex-1 overflow-auto p-4">
+        <div className="rounded-lg border bg-card">
+          {/* Audio Player */}
+          <AudioPlayer
+            audioUrl={effectiveAudioUrl}
+            onTimeUpdate={handleTimeUpdate}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
 
-                {/* Transcript Content with Audio Sync */}
-                <TranscriptContent
-                  currentAudioTime={currentAudioTime}
-                  audioDuration={audioDuration}
-                  onJumpToTime={handleJumpToTime}
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="exhibits" className="mt-0">
-              <div className="rounded-lg border bg-card p-6">
-                <h3 className="text-lg font-medium">Case Exhibits</h3>
-                <p className="text-muted-foreground">Select an exhibit from the sidebar to view it here.</p>
-              </div>
-            </TabsContent>
-            <TabsContent value="notes" className="mt-0">
-              <div className="rounded-lg border bg-card p-6">
-                <h3 className="text-lg font-medium">Personal Notes</h3>
-                <p className="text-muted-foreground">Your notes and annotations will appear here.</p>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </main>
-      </div>
+          {/* Transcript Content with Audio Sync */}
+          <TranscriptContent
+            currentAudioTime={currentAudioTime}
+            audioDuration={audioDuration}
+            onJumpToTime={handleJumpToTime}
+            transcriptUrl={transcriptUrl}
+          />
+        </div>
+      </main>
     </div>
   )
 }

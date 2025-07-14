@@ -66,6 +66,17 @@ interface Participant {
   contact?: string;
 }
 
+// Add Document type compatible with CaseDocument
+interface Document {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+  pages?: number;
+  audioFile?: string | number;
+  [key: string]: any;
+}
+
 export default function CaseDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -74,7 +85,7 @@ export default function CaseDetailPage() {
   const [viewMode, setViewMode] = useState<"info" | "transcript">("info")
   const [selectedTranscriptId, setSelectedTranscriptId] = useState<string | undefined>(undefined)
   const [caseData, setCaseData] = useState(null)
-  const [documents, setDocuments] = useState([])
+  const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -162,6 +173,25 @@ export default function CaseDetailPage() {
     setViewMode("transcript")
   }
 
+  // Find the selected transcript and its associated audio file
+  const selectedTranscript = documents.find(
+    (doc) => String(doc.id) === String(selectedTranscriptId)
+  );
+  let audioUrl = undefined;
+  if (selectedTranscript && selectedTranscript.audioFile) {
+    const audioDoc = documents.find(
+      (doc) => String(doc.id) === String(selectedTranscript.audioFile)
+    );
+    if (audioDoc && audioDoc.name) {
+      audioUrl = `/data/case-files/${caseId}/documents/${audioDoc.name}`;
+    }
+  }
+
+  let transcriptUrl = undefined;
+  if (selectedTranscript && selectedTranscript.name) {
+    transcriptUrl = `/data/case-files/${caseId}/documents/${selectedTranscript.name}`;
+  }
+
   // If not authenticated yet, don't render the content
   if (!isAuthenticated) {
     return null
@@ -231,6 +261,8 @@ export default function CaseDetailPage() {
         <TranscriptViewer
           caseData={caseData}
           selectedTranscriptId={selectedTranscriptId}
+          audioUrl={audioUrl}
+          transcriptUrl={transcriptUrl}
           onBackToInfo={() => setViewMode("info")}
         />
       )}

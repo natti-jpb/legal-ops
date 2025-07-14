@@ -69,6 +69,7 @@ interface CaseDocument {
   type: string;
   date: string;
   pages?: number;
+  audioFile?: string | number;
 }
 
 interface CaseData {
@@ -90,7 +91,7 @@ interface CaseData {
 
 interface CaseInformationProps {
   caseData: CaseData;
-  documents: Array<{ id: string; name: string; type: string; date: string }>;
+  documents: CaseDocument[];
   refreshDocuments: () => Promise<void>;
   onViewTranscript: (transcriptId?: string) => void;
   participants: Array<any>;
@@ -127,6 +128,7 @@ export function CaseInformation({
     court: caseData.court || "",
     judge: caseData.judge || "",
     type: caseData.type ? caseData.type.toLowerCase() : "",
+    status: caseData.status ? caseData.status.toLowerCase() : "active",
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -178,7 +180,7 @@ export function CaseInformation({
       case "active":
         return "bg-green-100 text-green-800";
       case "closed":
-        return "bg-gray-100 text-gray-800";
+        return "bg-red-100 text-red-800"; // changed from gray to red
       case "pending":
         return "bg-yellow-100 text-yellow-800";
       default:
@@ -317,6 +319,17 @@ export function CaseInformation({
     }
   };
 
+  // Find all audio file IDs referenced by a transcript
+  const audioIdsLinkedToTranscripts = new Set(
+    documents
+      .filter(doc => doc.type === "Transcript" && doc.audioFile)
+      .map(doc => String(doc.audioFile))
+  );
+  // Filter out audio files that are linked to a transcript
+  const visibleDocuments = documents.filter(
+    doc => !(doc.type === "Audio Recording" && audioIdsLinkedToTranscripts.has(String(doc.id)))
+  );
+
   return (
     <div className="container mx-auto py-6 px-4 max-w-6xl">
       {isLoading && (
@@ -357,7 +370,7 @@ export function CaseInformation({
               <div className="flex items-center">
                 <CardTitle className="text-lg flex items-center">
                   <Gavel className="h-5 w-5 mr-2" />
-                  Court Information
+                  Case Information
                 </CardTitle>
               </div>
               <Button variant="secondary" size="sm" onClick={() => setUpdateCourtDialogOpen(true)}><Pencil className="h-4 w-4" /></Button>
@@ -451,13 +464,12 @@ export function CaseInformation({
           </Card>
         </div>
         {/* Tabs for different sections */}
-        <Tabs defaultValue="schedule" className="w-full">
+        <Tabs defaultValue="documents" className="w-full">
           <TabsList className="mb-4">
-            <TabsTrigger value="schedule">Court Schedule</TabsTrigger>
             <TabsTrigger value="documents">Documents & Transcripts</TabsTrigger>
+            <TabsTrigger value="schedule">Court Schedule</TabsTrigger>
             <TabsTrigger value="notes">Case Notes</TabsTrigger>
           </TabsList>
-
           <TabsContent value="schedule" className="mt-0">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -510,7 +522,6 @@ export function CaseInformation({
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="documents" className="mt-0">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -561,7 +572,7 @@ export function CaseInformation({
                       </tr>
                     </thead>
                     <tbody>
-                      {documents.length === 0 ? (
+                      {visibleDocuments.length === 0 ? (
                         <tr>
                           <td
                             colSpan={4}
@@ -571,7 +582,7 @@ export function CaseInformation({
                           </td>
                         </tr>
                       ) : (
-                        documents.map((doc) => {
+                        visibleDocuments.map((doc) => {
                           // Ensure doc.name is a string
                           const fileName = Array.isArray(doc.name)
                             ? doc.name[0]
@@ -596,13 +607,30 @@ export function CaseInformation({
                               <td className="py-3 px-4">{doc.date}</td>
                               <td className="py-3 px-4 text-right">
                                 {doc.type === "Transcript" ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onViewTranscript(doc.id)}
-                                  >
-                                    View Transcript
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => onViewTranscript(doc.id)}
+                                    >
+                                      View Transcript
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="ml-2 text-red-500 hover:text-red-700"
+                                      onClick={() => {
+                                        setDocToDelete({
+                                          id: doc.id,
+                                          name: fileName,
+                                        });
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      aria-label="Delete transcript"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
                                 ) : (
                                   <>
                                     <a
@@ -642,7 +670,6 @@ export function CaseInformation({
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="notes" className="mt-0">
             <Card>
               <CardHeader>
@@ -1015,6 +1042,24 @@ export function CaseInformation({
                     <SelectItem value="civil">Civil</SelectItem>
                     <SelectItem value="criminal">Criminal</SelectItem>
                     <SelectItem value="family">Family</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  value={updateForm.status}
+                  onValueChange={(value) =>
+                    setUpdateForm((f) => ({ ...f, status: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

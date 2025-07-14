@@ -23,7 +23,7 @@ export async function PUT(request: NextRequest, { params }: { params: { caseId: 
           caseId,
           body.title,
           body.type,
-          cols[3], // status (unchanged)
+          body.status || cols[3], // status (updated if provided)
           body.court,
           body.judge,
           now,
@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest, { params }: { params: { caseId: 
       id: caseId,
       title: body.title,
       type: body.type,
-      status: updatedCols[3] || 'Active',
+      status: body.status || updatedCols[3] || 'active',
       court: body.court,
       judge: body.judge,
       lastUpdated: now,
@@ -77,5 +77,30 @@ export async function PUT(request: NextRequest, { params }: { params: { caseId: 
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update case' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { caseId: string } }) {
+  const { caseId } = params;
+  try {
+    // 1. Delete the case folder recursively
+    const caseFolderPath = path.join(process.cwd(), 'public/data/case-files', caseId);
+    if (fs.existsSync(caseFolderPath)) {
+      fs.rmSync(caseFolderPath, { recursive: true, force: true });
+    }
+
+    // 2. Remove the case from cases.csv
+    const csvPath = path.join(process.cwd(), 'public/data/cases.csv');
+    if (fs.existsSync(csvPath)) {
+      const csvContent = fs.readFileSync(csvPath, 'utf-8');
+      const lines = csvContent.split('\n');
+      const header = lines[0];
+      const filteredLines = [header, ...lines.slice(1).filter(line => line.split(',')[0] !== caseId)];
+      fs.writeFileSync(csvPath, filteredLines.join('\n'), 'utf-8');
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete case' }, { status: 500 });
   }
 } 

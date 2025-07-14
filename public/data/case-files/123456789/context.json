@@ -2,7 +2,7 @@
   "id": "123456789",
   "title": "test",
   "type": "civil",
-  "status": "Active",
+  "status": "active",
   "court": "TEST",
   "judge": "TEST",
   "lastUpdated": "2025-07-13",

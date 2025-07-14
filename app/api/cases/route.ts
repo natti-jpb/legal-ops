@@ -47,7 +47,8 @@ export async function POST(request: Request) {
     const contextFilePath = path.join(caseFolderPath, 'context.json');
     const contextData = {
       ...newCase,
-      "filingDate": new Date().toISOString(),
+      status: 'active',
+      filingDate: new Date().toISOString(),
     };
     fs.writeFileSync(contextFilePath, JSON.stringify(contextData, null, 2), 'utf-8');
     

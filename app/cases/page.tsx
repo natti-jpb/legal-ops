@@ -9,6 +9,8 @@ import {
   FileText,
   ArrowUpDown,
   LogOut,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +41,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
 
@@ -73,6 +77,11 @@ export default function CasesPage() {
     judge: ""
   });
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [caseToDelete, setCaseToDelete] = useState<Case | null>(null);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Load cases data from CSV
   useEffect(() => {
     const fetchCases = async () => {
@@ -98,7 +107,7 @@ export default function CasesPage() {
             id,
             title,
             type,
-            status,
+            status: status ? status.trim() : "",
             court,
             judge,
             lastUpdated,
@@ -416,57 +425,76 @@ export default function CasesPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {filteredCases.map((caseItem) => (
-              <Card key={caseItem.id} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {caseItem.title}
-                      </CardTitle>
-                      <CardDescription>{caseItem.id}</CardDescription>
+            {filteredCases.map((caseItem) => {
+              console.log('CASE DEBUG:', caseItem.id, caseItem.status);
+              return (
+                <Card key={caseItem.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">
+                          {caseItem.title}
+                        </CardTitle>
+                        <CardDescription>{caseItem.id}</CardDescription>
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          caseItem.status?.trim().toLowerCase() === "active"
+                            ? "bg-green-100 text-green-800"
+                            : caseItem.status?.trim().toLowerCase() === "closed"
+                            ? "bg-red-100 text-red-800"
+                            : caseItem.status?.trim().toLowerCase() === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {caseItem.status}
+                      </div>
                     </div>
-                    <div
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        caseItem.status === "Active"
-                          ? "bg-green-100 text-green-800"
-                          : caseItem.status === "Closed"
-                          ? "bg-gray-100 text-gray-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {caseItem.status}
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Last updated: {caseItem.lastUpdated}
+                      </div>
+                      <div className="flex items-center text-muted-foreground">
+                        <FileText className="mr-2 h-4 w-4" />
+                        {caseItem.transcriptCount} transcript
+                        {caseItem.transcriptCount !== 1 ? "s" : ""}
+                      </div>
+                      <p className="pt-2">{caseItem.description}</p>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center text-muted-foreground">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      Last updated: {caseItem.lastUpdated}
+                  </CardContent>
+                  <CardFooter className="flex justify-between border-t bg-muted/50 px-6 py-3">
+                    <div className="text-xs text-muted-foreground">
+                      {caseItem.court} • {caseItem.judge}
                     </div>
-                    <div className="flex items-center text-muted-foreground">
-                      <FileText className="mr-2 h-4 w-4" />
-                      {caseItem.transcriptCount} transcript
-                      {caseItem.transcriptCount !== 1 ? "s" : ""}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewCase(caseItem.id)}
+                      >
+                        View Case
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Delete case"
+                        onClick={() => {
+                          setCaseToDelete(caseItem);
+                          setDeleteInput("");
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
-                    <p className="pt-2">{caseItem.description}</p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between border-t bg-muted/50 px-6 py-3">
-                  <div className="text-xs text-muted-foreground">
-                    {caseItem.court} • {caseItem.judge}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewCase(caseItem.id)}
-                  >
-                    View Case
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
 
           {filteredCases.length === 0 && (
@@ -481,6 +509,75 @@ export default function CasesPage() {
             </div>
           )}
         </div>
+        {/* Delete Case Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Case</DialogTitle>
+              <DialogDescription>
+                {caseToDelete && (
+                  <>
+                    If you want to delete this case, please type '<b>{caseToDelete.title}</b>' below.
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder={caseToDelete ? caseToDelete.title : "Case name"}
+                value={deleteInput}
+                onChange={e => setDeleteInput(e.target.value)}
+                autoFocus
+                onPaste={e => e.preventDefault()}
+              />
+              <p className="mt-6 text-sm text-muted-foreground">
+                This will delete this case and all the documents it contains.<br />
+                Consider closing this case instead! (<b>View Case</b> → <b>Edit Case Information</b>)
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={isDeleting || !caseToDelete || deleteInput !== caseToDelete.title}
+                onClick={async () => {
+                  if (!caseToDelete) return;
+                  setIsDeleting(true);
+                  try {
+                    const response = await fetch(`/api/cases/${caseToDelete.id}`, {
+                      method: 'DELETE',
+                    });
+                    if (!response.ok) throw new Error('Failed to delete case');
+                    setCasesData(casesData.filter(c => c.id !== caseToDelete.id));
+                    setDeleteDialogOpen(false);
+                    setCaseToDelete(null);
+                    setDeleteInput("");
+                    toast({
+                      title: "Case deleted",
+                      description: `Case '${caseToDelete.title}' was deleted successfully.`,
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: `Failed to delete case: ${caseToDelete.title}`,
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+              >
+                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
