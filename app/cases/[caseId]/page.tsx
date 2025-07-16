@@ -93,7 +93,7 @@ export default function CaseDetailPage() {
   const [showChat, setShowChat] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const [chatInput, setChatInput] = useState("")
-  type ChatMessage = { role: "user" | "system"; content: string }
+  type ChatMessage = { role: "user" | "system"; content: string; timestamp?: string }
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -166,6 +166,43 @@ export default function CaseDetailPage() {
     fetchDocuments()
   }, [caseId])
 
+  // Load chat messages when caseId changes
+  useEffect(() => {
+    if (!caseId) return
+    const loadChatMessages = async () => {
+      try {
+        const response = await fetch(`/api/cases/${caseId}/chat`)
+        if (response.ok) {
+          const messages = await response.json()
+          setChatMessages(messages)
+        }
+      } catch (error) {
+        console.error('Error loading chat messages:', error)
+      }
+    }
+    loadChatMessages()
+  }, [caseId])
+
+  // Save chat messages whenever they change
+  useEffect(() => {
+    if (!caseId || chatMessages.length === 0) return
+    const saveChatMessages = async () => {
+      try {
+        const response = await fetch(`/api/cases/${caseId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: chatMessages })
+        })
+        if (!response.ok) {
+          console.error('Failed to save chat messages')
+        }
+      } catch (error) {
+        console.error('Error saving chat messages:', error)
+      }
+    }
+    saveChatMessages()
+  }, [chatMessages, caseId])
+
   // Handle logout
   const handleLogout = () => {
     // Remove user from both storage types
@@ -213,7 +250,7 @@ export default function CaseDetailPage() {
 
   // Helper for other devs to add a system message
   const addSystemMessage = (content: string) => {
-    setChatMessages(prev => [...prev, { role: "system", content }])
+    setChatMessages(prev => [...prev, { role: "system", content, timestamp: new Date().toISOString() }])
     setIsLoading(false)
   }
 
@@ -350,7 +387,8 @@ export default function CaseDetailPage() {
               e.preventDefault();
               if (chatInput.trim() !== "") {
                 const userMessage = chatInput;
-                setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
+                const timestamp = new Date().toISOString();
+                setChatMessages(prev => [...prev, { role: "user", content: userMessage, timestamp }]);
                 setChatInput("");
                 setIsLoading(true);
 
@@ -368,12 +406,12 @@ export default function CaseDetailPage() {
                   });
                   const data = await response.json();
                   if (data.answer) {
-                    setChatMessages(prev => [...prev, { role: "system", content: data.answer }]);
+                    setChatMessages(prev => [...prev, { role: "system", content: data.answer, timestamp: new Date().toISOString() }]);
                   } else {
-                    setChatMessages(prev => [...prev, { role: "system", content: "Error: invalid response from API." }]);
+                    setChatMessages(prev => [...prev, { role: "system", content: "Error: invalid response from API.", timestamp: new Date().toISOString() }]);
                   }
                 } catch (err) {
-                  setChatMessages(prev => [...prev, { role: "system", content: "Error connecting to API." }]);
+                  setChatMessages(prev => [...prev, { role: "system", content: "Error connecting to API.", timestamp: new Date().toISOString() }]);
                 }
                 setIsLoading(false);
               }
