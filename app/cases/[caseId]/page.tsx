@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { TranscriptViewer } from "@/components/transcript-viewer"
 import { CaseInformation } from "@/components/case-information"
 import { LogOut, ArrowLeft } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
 import Loading from "./loading"
@@ -89,6 +90,24 @@ export default function CaseDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [showChat, setShowChat] = useState(false)
+  const chatRef = useRef<HTMLDivElement>(null)
+  const [chatInput, setChatInput] = useState("")
+  type ChatMessage = { role: "user" | "system"; content: string }
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Close chat when clicking outside
+  useEffect(() => {
+    if (!showChat) return
+    function handleClick(event: MouseEvent) {
+      if (chatRef.current && !chatRef.current.contains(event.target as Node)) {
+        setShowChat(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [showChat])
 
   // Fetch documents.json for the case
   const fetchDocuments = async () => {
@@ -192,6 +211,12 @@ export default function CaseDetailPage() {
     transcriptUrl = `/data/case-files/${caseId}/documents/${selectedTranscript.name}`;
   }
 
+  // Helper for other devs to add a system message
+  const addSystemMessage = (content: string) => {
+    setChatMessages(prev => [...prev, { role: "system", content }])
+    setIsLoading(false)
+  }
+
   // If not authenticated yet, don't render the content
   if (!isAuthenticated) {
     return null
@@ -208,7 +233,7 @@ export default function CaseDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center px-4 lg:px-6">
           <Button variant="ghost" size="icon" className="mr-2" onClick={handleBackToCases}>
@@ -265,6 +290,82 @@ export default function CaseDetailPage() {
           transcriptUrl={transcriptUrl}
           onBackToInfo={() => setViewMode("info")}
         />
+      )}
+
+      {/* Floating Chat AI Assistant Button */}
+      {!showChat && (
+        <button
+          type="button"
+          className="fixed bottom-10 right-10 z-50 rounded-full bg-primary p-4 shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
+          aria-label="Open AI Assistant Chat"
+          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}
+          onClick={() => setShowChat(true)}
+        >
+          {/* Simple Robot SVG Icon */}
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="8" width="18" height="8" rx="4" />
+            <circle cx="7.5" cy="12" r="1.5" fill="white" />
+            <circle cx="16.5" cy="12" r="1.5" fill="white" />
+            <path d="M12 8V4" />
+            <circle cx="12" cy="2.5" r="1.5" fill="white" />
+          </svg>
+        </button>
+      )}
+
+      {/* Floating Chat Window */}
+      {showChat && (
+        <div
+          ref={chatRef}
+          className="fixed bottom-10 right-10 z-50 w-96 h-[30rem] bg-white rounded-xl shadow-2xl flex flex-col border border-gray-200"
+        >
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {chatMessages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}
+              >
+                <div
+                  className={
+                    msg.role === "user"
+                      ? "bg-primary text-white px-4 py-2 rounded-2xl max-w-[75%] break-words shadow"
+                      : "bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl max-w-[75%] break-words shadow"
+                  }
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 text-gray-500 px-4 py-2 rounded-2xl max-w-[75%] break-words shadow flex items-center gap-2">
+                  <Loader2 className="animate-spin w-5 h-5" />
+                  <span>Processing...</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <form
+            className="p-3 border-t border-gray-200"
+            onSubmit={e => {
+              e.preventDefault();
+              if (chatInput.trim() !== "") {
+                setChatMessages(prev => [...prev, { role: "user", content: chatInput }]);
+                setChatInput("");
+                setIsLoading(true);
+              }
+            }}
+          >
+            <input
+              type="text"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+              placeholder="Type your message..."
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              autoFocus
+              disabled={isLoading}
+            />
+          </form>
+        </div>
       )}
     </div>
   )
