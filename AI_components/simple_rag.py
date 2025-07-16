@@ -18,10 +18,10 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 CASES_DIR = Path(__file__).parent.parent / 'app' / 'cases'
 
 
-def read_files_recursively(directory: Path, exts=(".txt", ".pdf", ".docx")) -> List[str]:
-    """
-    Reads all .txt, .pdf, and .docx files and returns a list of their contents as strings.
-    """
+def read_files_recursively(directory):
+    from pathlib import Path
+    directory = Path(directory)
+    exts = (".txt", ".pdf", ".docx")  # Allowed extensions
     contents = []
     for path in directory.rglob("*"):
         if path.is_file() and path.suffix.lower() in exts:
@@ -46,13 +46,19 @@ def read_files_recursively(directory: Path, exts=(".txt", ".pdf", ".docx")) -> L
     return contents
 
 
-def simple_rag(question: str, model: str = "gpt-4.1-mini", max_tokens: int = 512) -> str:
-    """
-    Reads all case files (.txt, .pdf, .docx), concatenates their content, combines with the question, and sends to OpenAI for a direct answer.
-    """
-    case_contents = read_files_recursively(CASES_DIR)
+def simple_rag(question, case_id, model="gpt-4.1-mini", max_tokens=512):
+    CASES_DIR = "public/data/case-files"
+    case_dir = os.path.join(CASES_DIR, case_id, "documents")
+    case_contents = read_files_recursively(case_dir)
     context = "\n\n".join(case_contents)
-    prompt = f"Context extracted from case files:\n{context}\n\nQuestion: {question}\nAnswer:"
+    prompt = (
+        "You are a legal assistant specialized in analyzing documents related to law cases. "
+        "Your job is to help lawyers and legal professionals by answering questions based on the provided case documents. "
+        "Always provide clear, concise, and accurate answers using only the information available in the documents. "
+        "If the answer is not present in the documents, say you do not have enough information.\n"
+        f"\nContext:\n{context}\n"
+        f"\nQuestion: {question}\nAnswer:"
+    )
     print(context)
     print(question)
     response = openai_client.chat.completions.create(

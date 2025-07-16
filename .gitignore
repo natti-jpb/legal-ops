@@ -41,3 +41,12 @@ next-env.d.ts
 .vscode/
 *.swp
 *.swo
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environment
+venv/
+env/
+.venv/
