@@ -346,12 +346,36 @@ export default function CaseDetailPage() {
           </div>
           <form
             className="p-3 border-t border-gray-200"
-            onSubmit={e => {
+            onSubmit={async e => {
               e.preventDefault();
               if (chatInput.trim() !== "") {
-                setChatMessages(prev => [...prev, { role: "user", content: chatInput }]);
+                const userMessage = chatInput;
+                setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
                 setChatInput("");
                 setIsLoading(true);
+
+                try {
+                  // Chamada para a API Python
+                  const response = await fetch("http://localhost:8000/simple-rag", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      question: userMessage,
+                      case_id: caseId,
+                      model: "gpt-4.1-mini",
+                      max_tokens: 512
+                    })
+                  });
+                  const data = await response.json();
+                  if (data.answer) {
+                    setChatMessages(prev => [...prev, { role: "system", content: data.answer }]);
+                  } else {
+                    setChatMessages(prev => [...prev, { role: "system", content: "Error: invalid response from API." }]);
+                  }
+                } catch (err) {
+                  setChatMessages(prev => [...prev, { role: "system", content: "Error connecting to API." }]);
+                }
+                setIsLoading(false);
               }
             }}
           >
