@@ -18,5 +18,125 @@
     "role": "system",
     "content": "The case participants include:\n- Maria Rodriguez (Prosecutor, District Attorney's Office)\n- Raj Patel (Defense Attorney, Patel & Associates)\n- Michael Johnson (Defendant)\n- Hon. Maria Garcia (Judge, Superior Court)",
     "timestamp": "2024-01-15T10:31:08.000Z"
+  },
+  {
+    "role": "user",
+    "content": "Are you sure those are the participants",
+    "timestamp": "2025-07-17T08:49:03.222Z"
+  },
+  {
+    "role": "system",
+    "content": "Error connecting to API.",
+    "timestamp": "2025-07-17T08:49:03.249Z"
+  },
+  {
+    "role": "user",
+    "content": "Are you sure those are the participants",
+    "timestamp": "2025-07-17T08:49:09.821Z"
+  },
+  {
+    "role": "system",
+    "content": "Error connecting to API.",
+    "timestamp": "2025-07-17T08:49:09.851Z"
+  },
+  {
+    "role": "user",
+    "content": "are you sure those are the participants",
+    "timestamp": "2025-07-17T08:50:09.377Z"
+  },
+  {
+    "role": "system",
+    "content": "Error connecting to API.",
+    "timestamp": "2025-07-17T08:50:09.386Z"
+  },
+  {
+    "role": "user",
+    "content": "w",
+    "timestamp": "2025-07-17T08:50:40.280Z"
+  },
+  {
+    "role": "system",
+    "content": "Error connecting to API.",
+    "timestamp": "2025-07-17T08:50:40.323Z"
+  },
+  {
+    "role": "user",
+    "content": "ewwe",
+    "timestamp": "2025-07-17T09:17:39.172Z"
+  },
+  {
+    "role": "system",
+    "content": "I do not have enough information to answer the question.",
+    "timestamp": "2025-07-17T09:17:40.490Z"
+  },
+  {
+    "role": "user",
+    "content": "efwefw",
+    "timestamp": "2025-07-17T09:17:51.573Z"
+  },
+  {
+    "role": "system",
+    "content": "Error connecting to API.",
+    "timestamp": "2025-07-17T09:17:51.594Z"
+  },
+  {
+    "role": "user",
+    "content": "hello",
+    "timestamp": "2025-07-17T09:18:21.181Z"
+  },
+  {
+    "role": "system",
+    "content": "Hello! How can I assist you with your legal document analysis today?",
+    "timestamp": "2025-07-17T09:18:22.043Z"
+  },
+  {
+    "role": "user",
+    "content": "What are the documents in this case",
+    "timestamp": "2025-07-17T09:18:31.123Z"
+  },
+  {
+    "role": "system",
+    "content": "I do not have enough information.",
+    "timestamp": "2025-07-17T09:18:31.627Z"
+  },
+  {
+    "role": "user",
+    "content": "What are the documents",
+    "timestamp": "2025-07-17T09:19:28.479Z"
+  },
+  {
+    "role": "system",
+    "content": "I do not have enough information.",
+    "timestamp": "2025-07-17T09:19:29.419Z"
+  },
+  {
+    "role": "user",
+    "content": "E",
+    "timestamp": "2025-07-17T09:20:27.563Z"
+  },
+  {
+    "role": "system",
+    "content": "I do not have enough information to answer the question \"E\" based on the provided document. Please clarify or provide more details.",
+    "timestamp": "2025-07-17T09:20:30.651Z"
+  },
+  {
+    "role": "user",
+    "content": "What are the documents in this case",
+    "timestamp": "2025-07-17T09:20:38.117Z"
+  },
+  {
+    "role": "system",
+    "content": "I do not have enough information to determine what the documents in this case are.",
+    "timestamp": "2025-07-17T09:20:38.940Z"
+  },
+  {
+    "role": "user",
+    "content": "Summarize this case",
+    "timestamp": "2025-07-17T09:20:55.240Z"
+  },
+  {
+    "role": "system",
+    "content": "This document is not a legal case but rather a personal and research narrative about the concept of grit and its importance in success across various challenging settings. The speaker, a former teacher turned psychologist, describes their journey from teaching seventh-grade math to studying predictors of success in diverse environments such as West Point Military Academy, the National Spelling Bee, tough urban schools, and private companies. Their research found that grit—defined as passion and perseverance for long-term goals—is a stronger predictor of success than IQ, talent, or other factors. The speaker highlights that while grit is crucial, science currently knows little about how to effectively build it. They mention the growth mindset, developed by Carol Dweck, as a promising approach to fostering grit but emphasize the need for further research and testing to develop reliable methods to cultivate grit in children and adults.",
+    "timestamp": "2025-07-17T09:20:58.110Z"
   }
 ]
